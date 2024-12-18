@@ -29,7 +29,7 @@
 
     function crearEquipos(){
             $equipos = [];
-            array_push($equipos, new Equipo("Orcos","imagenes/icono_usuario.jpg"));
+            array_push($equipos, new Equipo("Orcos","imagenes/logos/orco.webp"));
             array_push($equipos, new Equipo("Humanos","imagenes/icono_usuario.jpg"));
             array_push($equipos, new Equipo("Skaven","imagenes/icono_usuario.jpg"));
             array_push($equipos, new Equipo("Enanos","imagenes/icono_usuario.jpg"));
