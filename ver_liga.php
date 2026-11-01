@@ -257,6 +257,8 @@ try {
             padding: 0 15px;
             font-weight: bold;
             color: #888;
+            text-align: center;
+            min-width: 140px;
         }
 
         .badge-bye {
@@ -266,6 +268,29 @@ try {
             border-radius: 4px;
             font-size: 12px;
             font-weight: bold;
+        }
+
+        .btn-acta {
+            background-color: #6bb5d6;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: bold;
+            display: inline-block;
+            transition: background 0.2s;
+        }
+
+        .btn-acta:hover {
+            background-color: #4e94b8;
+        }
+
+        .marcador-final {
+            font-size: 18px;
+            font-weight: bold;
+            color: #212529;
+            letter-spacing: 2px;
         }
 
         .identificador {
@@ -390,9 +415,10 @@ try {
                                 <?php if ($partido['equipo_visitante_id'] === null): ?>
                                     <span class="badge-bye">DESCANSA ESTA JORNADA (BYE)</span>
                                 <?php elseif ($partido['jugado']): ?>
-                                    <span style="font-size: 16px; color: #000;"><?php echo $partido['touchdowns_local']; ?> - <?php echo $partido['touchdowns_visitante']; ?></span>
+                                    <div class="marcador-final"><?php echo $partido['touchdowns_local']; ?> - <?php echo $partido['touchdowns_visitante']; ?></div>
+                                    <small style="color: #666; font-size: 11px;">Bajas: <?php echo $partido['bajas_local']; ?> - <?php echo $partido['bajas_visitante']; ?></small>
                                 <?php else: ?>
-                                    <span>VS</span>
+                                    <a href="acta_partido.php?id=<?php echo $partido['id']; ?>" class="btn-acta">Rellenar Acta</a>
                                 <?php endif; ?>
                             </div>
 
