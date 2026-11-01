@@ -184,7 +184,7 @@ try {
                 <div class="info-fila">Animadoras: <span><?php echo $equipo['animadoras']; ?></span></div>
                 <div class="info-fila">Asistentes: <span><?php echo $equipo['ayudantes_entrenador']; ?></span></div>
                 <div class="info-fila">Fans Dedicados: <span><?php echo $equipo['fans_dedicados']; ?></span></div>
-                <div class="info-fila">Médico (Apoth): <span><?php echo $equipo['apotecario'] ? 'Sí' : 'No'; ?></span></div>
+                <div class="info-fila">Médico: <span><?php echo $equipo['apotecario'] ? 'Sí' : 'No'; ?></span></div>
             </div>
         </div>
 
