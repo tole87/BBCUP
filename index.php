@@ -90,8 +90,8 @@ $emailLogeado = $_SESSION['email'] ?? '';
     <div class="contenido-princpial">
         <h1>Bienvenido a BB CUP</h1>
         <button onclick="window.location.href='crear_equipo.php'">Crear Nuevo Equipo</button>
-        <button onclick="window.location.href='mis_equipos.html'">Ver Mis Equipos</button>
-        <button onclick="window.location.href='unirse_liga.html'">Unirse a una Liga</button>
+        <button onclick="window.location.href='mis_equipos.php'">Ver Mis Equipos</button>
+        <button onclick="window.location.href='ligas.php'">Ligas</button>
     </div>
 </body>
 </html>

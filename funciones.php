@@ -22,24 +22,24 @@ function obtenerUsuarios() {
 }
 
 // ************** OBTENER DATOS TABLA EQUIPO *********************************************************
-function obtenerEquipos() {
+function obtenerRazas() {
     try {        
         include('conexion.php');
-        $query = "SELECT * FROM equipos";
+        $query = "SELECT * FROM razas";
         //Preparamos y ejecutamos la consulta
         $stmt = $baseDatos->prepare($query);
         $stmt->execute();             
       
-        $equipos = [];
+        $razas = [];
         // Guardamos las tiendas en un array
-        $equipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $razas = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         
         } catch (PDOException $e) {
             die("Error al obtener las tiendas: " . $e->getMessage());
          }
 
-    return $equipos;
+    return $razas;
 }
 
 // ************** OBTENER DATOS EQUIPO *********************************************************
@@ -47,20 +47,17 @@ function obtenerEquipoUnico($id) {
     try {        
         include('conexion.php');
 
-        $query = "SELECT * FROM equipos WHERE id = :id";
-        //Preparamos y ejecutamos la consulta
+        // Modificamos la tabla de "equipos" a "razas" para leer el catálogo estático
+        $query = "SELECT * FROM razas WHERE id = :id";
         $stmt = $baseDatos->prepare($query);
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
         $stmt->execute();             
       
-       
-        // Guardamos las tiendas en un array
         $equipo = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        
-        } catch (PDOException $e) {
-            die("Error al obtener las tiendas: " . $e->getMessage());
-         }
+    } catch (PDOException $e) {
+        die("Error al obtener los datos: " . $e->getMessage());
+    }
 
     return $equipo;
 }
@@ -112,5 +109,20 @@ function existeUsuario($email,$pass){
     }
 
 }
+// ************** OBTENER POSICIONES DE JUGADOR POR RAZA *********************************************************
+function obtenerPosicionesPorRaza($razaId) {
+    try {        
+        include('conexion.php');
+        $query = "SELECT * FROM posiciones_raza WHERE raza_id = :raza_id";
+        $stmt = $baseDatos->prepare($query);
+        $stmt->bindParam(':raza_id', $razaId, PDO::PARAM_INT);
+        $stmt->execute();             
+        $posiciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        die("Error al obtener las posiciones: " . $e->getMessage());
+    }
+    return $posiciones;
+}
 
 ?>
+
