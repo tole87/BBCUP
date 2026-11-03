@@ -47,7 +47,38 @@ try {
     $stmtE->execute([':liga_id' => $ligaId]);
     $equiposClasificacion = $stmtE->fetchAll(PDO::FETCH_ASSOC);
 
-    // 3. Obtener el calendario de partidos si la liga ya comenzó
+    // 3. Salón de la Fama (Top 5 Anotadores, Top 5 Carniceros, Top 5 SPP de los equipos de esta liga)
+    $queryTopTD = "SELECT j.nombre, j.posicion, j.touchdowns AS valor, e.nombre_equipo 
+                   FROM jugadores j
+                   JOIN equipos e ON j.equipo_id = e.id
+                   JOIN liga_equipos le ON le.equipo_id = e.id
+                   WHERE le.liga_id = :liga_id AND j.touchdowns > 0
+                   ORDER BY j.touchdowns DESC, j.spp DESC LIMIT 5";
+    $stTD = $baseDatos->prepare($queryTopTD);
+    $stTD->execute([':liga_id' => $ligaId]);
+    $topAnotadores = $stTD->fetchAll(PDO::FETCH_ASSOC);
+
+    $queryTopBajas = "SELECT j.nombre, j.posicion, j.bajas_causadas AS valor, e.nombre_equipo 
+                      FROM jugadores j
+                      JOIN equipos e ON j.equipo_id = e.id
+                      JOIN liga_equipos le ON le.equipo_id = e.id
+                      WHERE le.liga_id = :liga_id AND j.bajas_causadas > 0
+                      ORDER BY j.bajas_causadas DESC, j.spp DESC LIMIT 5";
+    $stBajas = $baseDatos->prepare($queryTopBajas);
+    $stBajas->execute([':liga_id' => $ligaId]);
+    $topCarniceros = $stBajas->fetchAll(PDO::FETCH_ASSOC);
+
+    $queryTopSPP = "SELECT j.nombre, j.posicion, j.spp AS valor, e.nombre_equipo 
+                    FROM jugadores j
+                    JOIN equipos e ON j.equipo_id = e.id
+                    JOIN liga_equipos le ON le.equipo_id = e.id
+                    WHERE le.liga_id = :liga_id AND j.spp > 0
+                    ORDER BY j.spp DESC LIMIT 5";
+    $stSPP = $baseDatos->prepare($queryTopSPP);
+    $stSPP->execute([':liga_id' => $ligaId]);
+    $topEstrellasSPP = $stSPP->fetchAll(PDO::FETCH_ASSOC);
+
+    // 4. Obtener el calendario de partidos si la liga ya comenzó
     $partidosPorJornada = [];
     if ($liga['estado'] !== 'abierta') {
         $queryPartidos = "SELECT p.*, 
@@ -79,238 +110,40 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($liga['nombre']); ?> - BB CUP</title>
     <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-image: url('imagenes/fondo.webp');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #333;
-        }
-
-        .contenedor {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-            padding: 30px;
-            width: 95%;
-            max-width: 1100px;
-            margin: 40px 0;
-        }
-
-        h1 {
-            color: #4e94b8;
-            margin-bottom: 5px;
-            text-align: center;
-        }
-
-        .descripcion {
-            text-align: center;
-            color: #666;
-            margin-bottom: 25px;
-            font-size: 15px;
-        }
-
-        .tarjetas-resumen {
-            display: flex;
-            justify-content: space-between;
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-
-        .tarjeta-dato {
-            background: #f8f9fa;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-            flex: 1;
-            text-align: center;
-        }
-
-        .tarjeta-dato strong {
-            display: block;
-            font-size: 13px;
-            color: #555;
-            text-transform: uppercase;
-            margin-bottom: 5px;
-        }
-
-        .tarjeta-dato span {
-            font-size: 20px;
-            font-weight: bold;
-            color: #000;
-        }
-
-        .codigo-badge {
-            background-color: #212529;
-            color: #ffc107;
-            padding: 4px 10px;
-            border-radius: 5px;
-            letter-spacing: 1px;
-            font-family: monospace;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            font-size: 15px;
-        }
-
-        table thead {
-            background-color: #000;
-            color: #fff;
-        }
-
-        table th, table td {
-            padding: 10px;
-            border: 1px solid #ddd;
-            text-align: center;
-        }
-
-        table tbody tr:nth-child(even) {
-            background-color: #f2f2f2;
-        }
-
-        table tbody tr:hover {
-            background-color: #e6f7ff;
-        }
-
-        .btn-volver {
-            background-color: #6bb5d6;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            font-size: 16px;
-            cursor: pointer;
-            border-radius: 6px;
-            text-decoration: none;
-            display: inline-block;
-            margin-top: 25px;
-            transition: background 0.3s;
-        }
-
-        .btn-volver:hover {
-            background-color: #4e94b8;
-        }
-
-        .btn-iniciar {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            padding: 14px 20px;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 20px;
-            transition: background 0.3s;
-        }
-
-        .btn-iniciar:hover {
-            background-color: #218838;
-        }
-
-        .jornada-bloque {
-            background: #f8f9fa;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 20px;
-        }
-
-        .jornada-titulo {
-            font-size: 18px;
-            color: #4e94b8;
-            margin-bottom: 12px;
-            border-bottom: 2px solid #4e94b8;
-            padding-bottom: 5px;
-        }
-
-        .partido-fila {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #fff;
-            padding: 10px 15px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-            border: 1px solid #e0e0e0;
-        }
-
-        .partido-equipo {
-            flex: 1;
-            font-weight: bold;
-        }
-
-        .partido-equipo.visitante {
-            text-align: right;
-        }
-
-        .partido-vs {
-            padding: 0 15px;
-            font-weight: bold;
-            color: #888;
-            text-align: center;
-            min-width: 140px;
-        }
-
-        .badge-bye {
-            background-color: #ffc107;
-            color: #000;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .btn-acta {
-            background-color: #6bb5d6;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 4px;
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: bold;
-            display: inline-block;
-            transition: background 0.2s;
-        }
-
-        .btn-acta:hover {
-            background-color: #4e94b8;
-        }
-
-        .marcador-final {
-            font-size: 18px;
-            font-weight: bold;
-            color: #212529;
-            letter-spacing: 2px;
-        }
-
-        .identificador {
-            display: flex;
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-            padding: 5px 15px;
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            align-items: center;
-        }
-
-        .identificador img {
-            width: 30px;
-            height: 30px;
-            margin-right: 10px;
-            border-radius: 50%;
-        }
+        body { margin: 0; font-family: Arial, sans-serif; background-image: url('imagenes/fondo.webp'); background-size: cover; background-position: center; background-repeat: no-repeat; min-height: 100vh; display: flex; justify-content: center; align-items: center; color: #333; }
+        .contenedor { background: rgba(255, 255, 255, 0.95); border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); padding: 30px; width: 95%; max-width: 1150px; margin: 40px 0; }
+        h1 { color: #4e94b8; margin-bottom: 5px; text-align: center; }
+        .descripcion { text-align: center; color: #666; margin-bottom: 25px; font-size: 15px; }
+        .tarjetas-resumen { display: flex; justify-content: space-between; gap: 15px; margin-bottom: 25px; }
+        .tarjeta-dato { background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; padding: 15px; flex: 1; text-align: center; }
+        .tarjeta-dato strong { display: block; font-size: 13px; color: #555; text-transform: uppercase; margin-bottom: 5px; }
+        .tarjeta-dato span { font-size: 20px; font-weight: bold; color: #000; }
+        .codigo-badge { background-color: #212529; color: #ffc107; padding: 4px 10px; border-radius: 5px; letter-spacing: 1px; font-family: monospace; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 15px; }
+        table thead { background-color: #000; color: #fff; }
+        table th, table td { padding: 10px; border: 1px solid #ddd; text-align: center; }
+        table tbody tr:nth-child(even) { background-color: #f2f2f2; }
+        table tbody tr:hover { background-color: #e6f7ff; }
+        .btn-volver { background-color: #6bb5d6; color: white; border: none; padding: 12px 25px; font-size: 16px; cursor: pointer; border-radius: 6px; text-decoration: none; display: inline-block; margin-top: 25px; transition: background 0.3s; }
+        .btn-volver:hover { background-color: #4e94b8; }
+        .btn-iniciar { background-color: #28a745; color: white; border: none; padding: 14px 20px; font-size: 18px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 20px; transition: background 0.3s; }
+        .btn-iniciar:hover { background-color: #218838; }
+        .jornada-bloque { background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-top: 20px; }
+        .jornada-titulo { font-size: 18px; color: #4e94b8; margin-bottom: 12px; border-bottom: 2px solid #4e94b8; padding-bottom: 5px; }
+        .partido-fila { display: flex; align-items: center; justify-content: space-between; background: #fff; padding: 10px 15px; border-radius: 6px; margin-bottom: 8px; border: 1px solid #e0e0e0; }
+        .partido-equipo { flex: 1; font-weight: bold; }
+        .partido-equipo.visitante { text-align: right; }
+        .partido-vs { padding: 0 15px; font-weight: bold; color: #888; text-align: center; min-width: 170px; }
+        .badge-bye { background-color: #ffc107; color: #000; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .btn-acta { background-color: #6bb5d6; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 12px; font-weight: bold; display: inline-block; transition: background 0.2s; margin: 2px; }
+        .btn-acta:hover { background-color: #4e94b8; }
+        .marcador-final { font-size: 18px; font-weight: bold; color: #212529; letter-spacing: 2px; }
+        .grid-fama { display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap; }
+        .caja-fama { flex: 1; min-width: 300px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; padding: 15px; }
+        .caja-fama h3 { margin: 0 0 10px 0; font-size: 16px; color: #212529; border-bottom: 2px solid #ffc107; padding-bottom: 5px; }
+        .banner-campeon { background: linear-gradient(135deg, #212529, #343a40); color: #ffc107; border: 2px solid #ffc107; border-radius: 10px; padding: 20px; text-align: center; margin: 25px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .identificador { display: flex; background: rgba(255, 255, 255, 0.9); border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); padding: 5px 15px; position: fixed; top: 20px; right: 20px; align-items: center; }
+        .identificador img { width: 30px; height: 30px; margin-right: 10px; border-radius: 50%; }
     </style>
 </head>
 <body>
@@ -342,7 +175,6 @@ try {
             </div>
         </div>
 
-        <!-- Panel de acción para el comisionado si la liga aún no ha comenzado -->
         <?php if ($esComisionado && $liga['estado'] === 'abierta'): ?>
             <form method="POST" action="iniciar_liga.php" onsubmit="return confirm('¿Seguro que deseas iniciar la liga? Se cerrarán las inscripciones y se generará el calendario de partidos.');">
                 <input type="hidden" name="liga_id" value="<?php echo $liga['id']; ?>">
@@ -350,6 +182,21 @@ try {
                     <?php echo count($equiposClasificacion) < 2 ? 'Esperando al menos 2 equipos para iniciar' : '▶ Iniciar Competición y Generar Calendario'; ?>
                 </button>
             </form>
+        <?php endif; ?>
+
+        <!-- BANNER DE CAMPEÓN SI LA LIGA ESTÁ FINALIZADA -->
+        <?php if ($liga['estado'] === 'finalizada' && !empty($equiposClasificacion)): 
+            $campeon = $equiposClasificacion[0];
+        ?>
+            <div class="banner-campeon">
+                <div style="font-size: 14px; text-transform: uppercase; letter-spacing: 2px; color: #fff;">🏆 Competición Finalizada — Campeón Oficial 🏆</div>
+                <h2 style="margin: 8px 0; font-size: 32px; color: #ffc107;"><?php echo htmlspecialchars($campeon['nombre_equipo']); ?></h2>
+                <div style="color: #ccc; font-size: 15px;">
+                    Raza: <strong><?php echo htmlspecialchars($campeon['raza']); ?></strong> | 
+                    Entrenador: <strong><?php echo htmlspecialchars($campeon['entrenador']); ?></strong> | 
+                    Puntos: <strong><?php echo $campeon['puntos']; ?> PTS</strong>
+                </div>
+            </div>
         <?php endif; ?>
 
         <h2 style="margin-top: 30px;">Clasificación General</h2>
@@ -364,7 +211,7 @@ try {
                         <th>Equipo</th>
                         <th>Raza</th>
                         <th>Entrenador</th>
-                        <th>TV</th>
+                        <th>CTV</th>
                         <th>PTS</th>
                         <th>PJ</th>
                         <th>PG</th>
@@ -381,7 +228,11 @@ try {
                     ?>
                     <tr>
                         <td><strong><?php echo $pos++; ?></strong></td>
-                        <td style="text-align: left; padding-left: 15px;"><strong><?php echo htmlspecialchars($eq['nombre_equipo']); ?></strong></td>
+                        <td style="text-align: left; padding-left: 15px;">
+                            <a href="ver_equipo.php?id=<?php echo $eq['equipo_id']; ?>" style="color: #4e94b8; font-weight: bold; text-decoration: none;">
+                                <?php echo htmlspecialchars($eq['nombre_equipo']); ?>
+                            </a>
+                        </td>
                         <td><?php echo htmlspecialchars($eq['raza']); ?></td>
                         <td><?php echo htmlspecialchars($eq['entrenador']); ?></td>
                         <td><?php echo number_format($eq['valor_equipo'], 0, ',', '.'); ?> GP</td>
@@ -397,6 +248,58 @@ try {
                 </tbody>
             </table>
         <?php endif; ?>
+
+        <!-- SALÓN DE LA FAMA DE LA LIGA -->
+        <h2 style="margin-top: 40px;">🏆 Salón de la Fama de la Liga</h2>
+        <div class="grid-fama">
+            <div class="caja-fama">
+                <h3>🏈 Máximos Anotadores (TD)</h3>
+                <?php if (empty($topAnotadores)): ?>
+                    <p style="font-size: 13px; color: #777;">Sin touchdowns registrados aún.</p>
+                <?php else: ?>
+                    <table style="font-size: 12px; margin-top: 5px;">
+                        <?php foreach ($topAnotadores as $t): ?>
+                            <tr>
+                                <td style="text-align: left;"><strong><?php echo htmlspecialchars($t['nombre']); ?></strong> <small>(<?php echo htmlspecialchars($t['nombre_equipo']); ?>)</small></td>
+                                <td width="20%"><strong><?php echo $t['valor']; ?> TD</strong></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </table>
+                <?php endif; ?>
+            </div>
+
+            <div class="caja-fama">
+                <h3>🩸 Más Carniceros (Bajas)</h3>
+                <?php if (empty($topCarniceros)): ?>
+                    <p style="font-size: 13px; color: #777;">Sin bajas registradas aún.</p>
+                <?php else: ?>
+                    <table style="font-size: 12px; margin-top: 5px;">
+                        <?php foreach ($topCarniceros as $t): ?>
+                            <tr>
+                                <td style="text-align: left;"><strong><?php echo htmlspecialchars($t['nombre']); ?></strong> <small>(<?php echo htmlspecialchars($t['nombre_equipo']); ?>)</small></td>
+                                <td width="20%"><strong><?php echo $t['valor']; ?> Bajas</strong></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </table>
+                <?php endif; ?>
+            </div>
+
+            <div class="caja-fama">
+                <h3>⭐ Estrellas de la Liga (SPP)</h3>
+                <?php if (empty($topEstrellasSPP)): ?>
+                    <p style="font-size: 13px; color: #777;">Sin experiencia registrada aún.</p>
+                <?php else: ?>
+                    <table style="font-size: 12px; margin-top: 5px;">
+                        <?php foreach ($topEstrellasSPP as $t): ?>
+                            <tr>
+                                <td style="text-align: left;"><strong><?php echo htmlspecialchars($t['nombre']); ?></strong> <small>(<?php echo htmlspecialchars($t['nombre_equipo']); ?>)</small></td>
+                                <td width="20%"><strong><?php echo $t['valor']; ?> SPP</strong></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </table>
+                <?php endif; ?>
+            </div>
+        </div>
 
         <!-- Sección de Calendario de Jornadas -->
         <?php if (!empty($partidosPorJornada)): ?>
@@ -417,6 +320,16 @@ try {
                                 <?php elseif ($partido['jugado']): ?>
                                     <div class="marcador-final"><?php echo $partido['touchdowns_local']; ?> - <?php echo $partido['touchdowns_visitante']; ?></div>
                                     <small style="color: #666; font-size: 11px;">Bajas: <?php echo $partido['bajas_local']; ?> - <?php echo $partido['bajas_visitante']; ?></small>
+                                    
+                                    <div style="margin-top: 5px;">
+                                        <a href="ver_partido.php?id=<?php echo $partido['id']; ?>" class="btn-acta" style="background-color: #343a40;">📜 Ver Acta</a>
+                                        <?php if (empty($partido['economia_resuelta'])): ?>
+                                            <a href="economia_partido.php?id=<?php echo $partido['id']; ?>" class="btn-acta" style="background-color: #ffc107; color: #000;">💰 Cobrar Taquilla</a>
+                                        <?php else: ?>
+                                            <span style="display: block; margin-top: 3px; font-size: 11px; color: #28a745; font-weight: bold;">🪙 Taquilla Cobrada</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    
                                 <?php else: ?>
                                     <a href="acta_partido.php?id=<?php echo $partido['id']; ?>" class="btn-acta">Rellenar Acta</a>
                                 <?php endif; ?>
